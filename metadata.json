@@ -1,0 +1,6 @@
+{
+  "name": "2048 Crypto Airdrop Mini App",
+  "description": "A telegram-style 2048 game where tiles represent crypto values (10, 100, 1k, etc.). Earn tokens, complete tasks, unlock upgrades, track playtime, climb leaderboards, and prepare for the airdrop.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
