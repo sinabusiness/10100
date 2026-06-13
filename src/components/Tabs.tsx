@@ -31,7 +31,7 @@ export const Tabs: React.FC<TabsProps> = ({
   };
 
   return (
-    <div className="fixed bottom-0 inset-x-0 bg-slate-950/95 backdrop-blur-md border-t border-slate-900 px-4 py-2 z-40 max-w-lg mx-auto w-full font-plus-jakarta select-none">
+    <div className="absolute bottom-0 inset-x-0 bg-slate-950/95 backdrop-blur-md border-t border-slate-900 px-4 py-2 z-40 w-full font-plus-jakarta select-none">
       <div className="flex justify-between items-center gap-1">
         {tabsList.map((tab) => {
           const Icon = tab.icon;

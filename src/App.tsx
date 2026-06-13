@@ -391,9 +391,9 @@ export default function App() {
   const hasUnclaimedDaily = stats.lastDailyClaim !== new Date().toDateString();
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-0 md:p-4 text-slate-100 antialiased overflow-x-hidden selection:bg-yellow-500/30 selection:text-white">
+    <div className="h-screen h-[100dvh] w-full bg-slate-950 flex items-center justify-center p-0 md:p-4 text-slate-100 antialiased overflow-hidden selection:bg-yellow-500/30 selection:text-white">
       {/* Immersive Telegram Smartphone Mock Frame */}
-      <div className="w-full max-w-lg min-h-screen md:min-h-[812px] md:max-h-[850px] bg-slate-950 md:rounded-[40px] md:border-4 md:border-slate-900 shadow-2xl relative flex flex-col overflow-hidden">
+      <div className="w-full max-w-lg h-full max-h-screen max-h-[100dvh] md:h-[812px] md:max-h-[850px] bg-slate-950 md:rounded-[40px] md:border-4 md:border-slate-900 shadow-2xl relative flex flex-col overflow-hidden">
         {/* Telephone top status bar mimic */}
         <div className="bg-slate-950 px-6 pt-3 pb-1.5 flex justify-between items-center z-50 text-xs text-slate-500 font-mono font-bold select-none border-b border-slate-900/40">
           <div className="flex items-center gap-1">
