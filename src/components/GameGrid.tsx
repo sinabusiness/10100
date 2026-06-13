@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Tile } from '../types';
 import { getTileStyle, formatTileValue } from '../utils/gameUtils';
 import { motion, AnimatePresence } from 'motion/react';
-import { Undo2, RotateCcw, Volume2, VolumeX, AlertTriangle, Lock, Unlock } from 'lucide-react';
+import { Undo2, RotateCcw, Volume2, VolumeX, AlertTriangle } from 'lucide-react';
 import { sounds } from './SoundEffects';
 
 interface GameGridProps {
@@ -31,22 +31,6 @@ export const GameGrid: React.FC<GameGridProps> = ({
   gameOver
 }) => {
   const boardRef = useRef<HTMLDivElement>(null);
-  const [isScreenLocked, setIsScreenLocked] = useState(false);
-
-  // Sync document level overflow/scrolling state when screen is locked
-  useEffect(() => {
-    if (isScreenLocked) {
-      document.body.classList.add('overflow-hidden', 'touch-none', 'overscroll-none');
-      document.documentElement.classList.add('overflow-hidden', 'touch-none', 'overscroll-none');
-    } else {
-      document.body.classList.remove('overflow-hidden', 'touch-none', 'overscroll-none');
-      document.documentElement.classList.remove('overflow-hidden', 'touch-none', 'overscroll-none');
-    }
-    return () => {
-      document.body.classList.remove('overflow-hidden', 'touch-none', 'overscroll-none');
-      document.documentElement.classList.remove('overflow-hidden', 'touch-none', 'overscroll-none');
-    };
-  }, [isScreenLocked]);
 
   // Setup active native touch event listeners to lock body-level scrolling and prevent default actions while dragging inside the board
   useEffect(() => {
@@ -141,34 +125,7 @@ export const GameGrid: React.FC<GameGridProps> = ({
   const emptyCells = Array(16).fill(null);
 
   return (
-    <div className={`flex flex-col gap-4 font-plus-jakarta max-w-lg mx-auto w-full select-none px-1 ${isScreenLocked ? 'relative z-50' : ''}`}>
-      {/* Full viewport touch blocking glass backdrop when Locked state is enabled */}
-      {isScreenLocked && (
-        <div 
-          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-xs touch-none overscroll-none select-none pointer-events-auto flex flex-col justify-between items-center p-6 text-center"
-          onTouchStart={(e) => {
-            if (e.cancelable) e.preventDefault();
-          }}
-          onTouchMove={(e) => {
-            if (e.cancelable) e.preventDefault();
-          }}
-        >
-          <div className="mt-8 animate-pulse">
-            <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 font-extrabold font-mono text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-full shadow-inner shadow-amber-500/5">
-              ⚡ Safe Play Mode Active
-            </span>
-          </div>
-          <div className="mb-24 flex flex-col items-center gap-1">
-            <span className="text-slate-300 font-mono text-xs font-semibold">
-              Screen scrolling and zoom are completely locked.
-            </span>
-            <span className="text-slate-500 font-mono text-[10px]">
-              Tap the highlighted "Locked" button above to unlock.
-            </span>
-          </div>
-        </div>
-      )}
-
+    <div className="flex flex-col gap-4 font-plus-jakarta max-w-lg mx-auto w-full select-none px-1">
       {/* Game Stats and Quick Controls Bar */}
       <div className="flex items-center justify-between gap-1 mt-1">
         {/* Score blocks */}
@@ -185,29 +142,6 @@ export const GameGrid: React.FC<GameGridProps> = ({
 
         {/* Action controllers */}
         <div className="flex gap-1 sm:gap-1.5">
-          {/* Lock Screen Toggle Button */}
-          <button
-            onClick={() => setIsScreenLocked(!isScreenLocked)}
-            className={`flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 border rounded-xl font-bold text-[10px] sm:text-xs transition active:scale-95 ${
-              isScreenLocked
-                ? 'bg-amber-500 hover:bg-amber-400 border-amber-400 text-slate-950 font-extrabold shadow-md shadow-amber-500/20'
-                : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200'
-            }`}
-            title={isScreenLocked ? "Unlock screen scrolling" : "Lock screen view to block wobble"}
-          >
-            {isScreenLocked ? (
-              <>
-                <Lock className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-950" />
-                <span>Locked</span>
-              </>
-            ) : (
-              <>
-                <Unlock className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-400" />
-                <span>Lock</span>
-              </>
-            )}
-          </button>
-
           {/* Mute Button */}
           <button
             onClick={onToggleMute}
