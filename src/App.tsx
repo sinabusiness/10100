@@ -434,7 +434,7 @@ export default function App() {
         {/* Core dynamic body screen wrapper */}
         <div className="flex-1 overflow-y-auto no-scrollbar px-4 pt-4 pb-20 z-10 bg-radial-gradient">
           {activeTab === 'play' && (
-            <div className="flex flex-col gap-4 animate-fade-in">
+            <div className="flex flex-col gap-4 animate-fade-in animate-once duration-300">
               {/* Promotional Telegram Header card */}
               <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 text-left relative overflow-hidden shadow-lg shadow-indigo-950/10">
                 <div className="absolute -right-3 -bottom-3 w-28 h-28 bg-yellow-500/[0.03] blur-2xl rounded-full" />

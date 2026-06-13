@@ -6,6 +6,27 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+/* 
+  Configure body and HTML to enable flexible vertical scroll structures on small screens,
+  while eliminating custom horizontal wobbling, tap highlights and default callouts.
+*/
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Disable callout and highlight on iOS/Android touch taps */
+* {
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none !important;
+}
+
 /* Custom Web3 Effects & Animations */
 @layer utilities {
   .glow-gold {
