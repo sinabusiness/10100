@@ -93,6 +93,7 @@ export default function App() {
   const statsRef = useRef<UserStats>(DEFAULT_STATS);
   const gameOverRef = useRef<boolean>(false);
   const historyRef = useRef<{ tiles: Tile[]; score: number }[]>([]);
+  const lastMoveTimeRef = useRef<number>(0);
 
   useEffect(() => {
     tilesRef.current = tiles;
@@ -323,10 +324,18 @@ export default function App() {
 
     const cell2 = getRandomEmptyCell([tile1]);
     if (!cell2) {
-      setTiles([tile1]);
+      const singleTiles = [tile1];
+      setTiles(singleTiles);
+      tilesRef.current = singleTiles;
+      
       setScore(0);
+      scoreRef.current = 0;
+      
       setHistory([]);
+      historyRef.current = [];
+      
       setGameOver(false);
+      gameOverRef.current = false;
       return;
     }
 
@@ -340,16 +349,32 @@ export default function App() {
       isNew: true
     };
 
-    setTiles([tile1, tile2]);
+    const initialTiles = [tile1, tile2];
+    setTiles(initialTiles);
+    tilesRef.current = initialTiles;
+
     setScore(0);
+    scoreRef.current = 0;
+
     setHistory([]);
+    historyRef.current = [];
+
     setGameOver(false);
+    gameOverRef.current = false;
+    
     updateStats({ gamesPlayed: stats.gamesPlayed + 1 });
   };
 
   // Movement Trigger Execution
   const handleMove = (direction: 'up' | 'down' | 'left' | 'right') => {
     if (gameOverRef.current) return;
+
+    // Throttle move triggers to prevent slide animation glitches (matching 150ms slide transition time)
+    const now = Date.now();
+    if (now - lastMoveTimeRef.current < 130) {
+      return;
+    }
+    lastMoveTimeRef.current = now;
 
     const currentTiles = tilesRef.current;
     const currentScore = scoreRef.current;
@@ -361,14 +386,21 @@ export default function App() {
     if (result.hasMoved) {
       // Record historical undo reference state
       const preMoveTiles = currentTiles.map(t => ({ ...t }));
+      
+      const newHistoryItem = { tiles: preMoveTiles, score: currentScore };
       setHistory(prev => {
-        const nextHist = [...prev, { tiles: preMoveTiles, score: currentScore }];
+        const nextHist = [...prev, newHistoryItem];
         // Cap history depth to 15 slots for performance
         if (nextHist.length > 15) {
           nextHist.shift();
         }
         return nextHist;
       });
+      // Synchronously update historyRef
+      historyRef.current = [...historyRef.current, newHistoryItem];
+      if (historyRef.current.length > 15) {
+        historyRef.current.shift();
+      }
 
       // Update positions
       let nextTiles = result.newTiles;
@@ -404,7 +436,10 @@ export default function App() {
       }
 
       setTiles(nextTiles);
+      tilesRef.current = nextTiles; // Synchronously update tiles ref!
+
       setScore(nextScore);
+      scoreRef.current = nextScore; // Synchronously update score ref!
 
       // Analyze maximum tile reached dynamically
       const maxLvlInGrid = Math.max(...nextTiles.map(t => t.level));
@@ -427,6 +462,7 @@ export default function App() {
       // Audit potential future moves
       if (!hasAvailableMoves(nextTiles)) {
         setGameOver(true);
+        gameOverRef.current = true; // Synchronously update gameover ref!
         triggerHapticFeedback();
         if (tgUser) {
           const maxTileValueStr = formatTileValue(getValueByLevel(maxLvlInGrid));
@@ -447,8 +483,13 @@ export default function App() {
     sounds.playMove();
     const lastState = currentHistory[currentHistory.length - 1];
     setTiles(lastState.tiles);
+    tilesRef.current = lastState.tiles; // Synchronous!
+
     setScore(lastState.score);
+    scoreRef.current = lastState.score; // Synchronous!
+
     setGameOver(false);
+    gameOverRef.current = false; // Synchronous!
 
     // Consume undo credit
     updateStats({
@@ -456,6 +497,7 @@ export default function App() {
     });
 
     setHistory(prev => prev.slice(0, prev.length - 1));
+    historyRef.current = currentHistory.slice(0, currentHistory.length - 1); // Synchronous!
   };
 
   // Synchronously swap targeted Telegram player details to sandbox test individual results
