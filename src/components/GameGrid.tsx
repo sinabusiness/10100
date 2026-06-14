@@ -207,6 +207,7 @@ export const GameGrid: React.FC<GameGridProps> = ({
               return (
                 <motion.div
                   key={tile.id}
+                  layout="position"
                   initial={tile.isNew ? { scale: 0.1, opacity: 0 } : { scale: 1, opacity: 1 }}
                   animate={{
                     scale: tile.isMerged ? [1, 1.15, 1] : 1,
@@ -214,6 +215,11 @@ export const GameGrid: React.FC<GameGridProps> = ({
                   }}
                   exit={{ scale: 0.1, opacity: 0 }}
                   transition={{
+                    layout: {
+                      type: 'spring',
+                      stiffness: 450,
+                      damping: 30,
+                    },
                     scale: {
                       type: 'tween',
                       ease: 'easeOut',
@@ -230,7 +236,6 @@ export const GameGrid: React.FC<GameGridProps> = ({
                     width: 'calc(25% - 12.5px)',
                     height: 'calc(25% - 12.5px)',
                     zIndex: tile.isMerged ? 10 : 2,
-                    transition: 'top 150ms cubic-bezier(0.16, 1, 0.3, 1), left 150ms cubic-bezier(0.16, 1, 0.3, 1)'
                   }}
                 >
                   {/* Tile presentation layer */}
