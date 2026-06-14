@@ -87,6 +87,33 @@ export default function App() {
   // Time metrics tracker reference
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Keep references to state variables for synchronous access in rapid touch/keyboard gesture events
+  const tilesRef = useRef<Tile[]>([]);
+  const scoreRef = useRef<number>(0);
+  const statsRef = useRef<UserStats>(DEFAULT_STATS);
+  const gameOverRef = useRef<boolean>(false);
+  const historyRef = useRef<{ tiles: Tile[]; score: number }[]>([]);
+
+  useEffect(() => {
+    tilesRef.current = tiles;
+  }, [tiles]);
+
+  useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
+
+  useEffect(() => {
+    statsRef.current = stats;
+  }, [stats]);
+
+  useEffect(() => {
+    gameOverRef.current = gameOver;
+  }, [gameOver]);
+
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
+
   // Passive Referral Welcome Modal state
   const [welcomeModal, setWelcomeModal] = useState<{ isOpen: boolean; referrerName: string; rewardAmount: number } | null>(null);
 
@@ -322,16 +349,20 @@ export default function App() {
 
   // Movement Trigger Execution
   const handleMove = (direction: 'up' | 'down' | 'left' | 'right') => {
-    if (gameOver) return;
+    if (gameOverRef.current) return;
+
+    const currentTiles = tilesRef.current;
+    const currentScore = scoreRef.current;
+    const currentStats = statsRef.current;
 
     // Simulate shifts
-    const result = moveTiles(tiles, direction);
+    const result = moveTiles(currentTiles, direction);
 
     if (result.hasMoved) {
       // Record historical undo reference state
-      const preMoveTiles = tiles.map(t => ({ ...t }));
+      const preMoveTiles = currentTiles.map(t => ({ ...t }));
       setHistory(prev => {
-        const nextHist = [...prev, { tiles: preMoveTiles, score }];
+        const nextHist = [...prev, { tiles: preMoveTiles, score: currentScore }];
         // Cap history depth to 15 slots for performance
         if (nextHist.length > 15) {
           nextHist.shift();
@@ -343,15 +374,15 @@ export default function App() {
       let nextTiles = result.newTiles;
 
       // Apply upgrades permanent multiplier score
-      const totalEarnedPoints = result.scoreIncrement * stats.multiplierLevel;
-      const nextScore = score + totalEarnedPoints;
+      const totalEarnedPoints = result.scoreIncrement * currentStats.multiplierLevel;
+      const nextScore = currentScore + totalEarnedPoints;
 
       // Trigger standard swipe chime
       if (result.scoreIncrement > 0) {
         sounds.playMerge();
         // Credit extra $SWIPE values to user total profile pool
         updateStats({
-          totalCoins: stats.totalCoins + totalEarnedPoints
+          totalCoins: currentStats.totalCoins + totalEarnedPoints
         });
       } else {
         sounds.playMove();
@@ -360,7 +391,7 @@ export default function App() {
       // Spawn exactly one new random tile
       const emptySpot = getRandomEmptyCell(nextTiles);
       if (emptySpot) {
-        const spawnLevel = rollTileLevel();
+        const spawnLevel = rollTileLevel(currentStats);
         const spawnedTile: Tile = {
           id: `tile-spawn-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           value: getValueByLevel(spawnLevel),
@@ -377,7 +408,7 @@ export default function App() {
 
       // Analyze maximum tile reached dynamically
       const maxLvlInGrid = Math.max(...nextTiles.map(t => t.level));
-      if (maxLvlInGrid > stats.maxTileLevel) {
+      if (maxLvlInGrid > currentStats.maxTileLevel) {
         updateStats({ maxTileLevel: maxLvlInGrid });
         sounds.playLevelUp();
       }
@@ -386,7 +417,7 @@ export default function App() {
       if (nextScore >= 1000) {
         setTasks(prev => prev.map(t => {
           if (t.id === 't6' && !t.completed) {
-            updateStats({ totalCoins: stats.totalCoins + t.reward });
+            updateStats({ totalCoins: currentStats.totalCoins + t.reward });
             return { ...t, completed: true };
           }
           return t;
@@ -409,17 +440,19 @@ export default function App() {
 
   // Board undo logic
   const handleUndo = () => {
-    if (stats.undoCredits <= 0 || history.length === 0) return;
+    const currentStats = statsRef.current;
+    const currentHistory = historyRef.current;
+    if (currentStats.undoCredits <= 0 || currentHistory.length === 0) return;
 
     sounds.playMove();
-    const lastState = history[history.length - 1];
+    const lastState = currentHistory[currentHistory.length - 1];
     setTiles(lastState.tiles);
     setScore(lastState.score);
     setGameOver(false);
 
     // Consume undo credit
     updateStats({
-      undoCredits: stats.undoCredits - 1
+      undoCredits: currentStats.undoCredits - 1
     });
 
     setHistory(prev => prev.slice(0, prev.length - 1));
@@ -438,7 +471,7 @@ export default function App() {
   // Keyboard navigation Hooks
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (activeTab !== 'play' || gameOver) return;
+      if (activeTab !== 'play' || gameOverRef.current) return;
       
       switch (e.key) {
         case 'ArrowUp':
@@ -472,7 +505,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tiles, gameOver, activeTab, score, stats]);
+  }, [activeTab]);
 
   // Assess if daily has unclaimed status today
   const hasUnclaimedDaily = stats.lastDailyClaim !== new Date().toDateString();
