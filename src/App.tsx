@@ -6,6 +6,7 @@ import { EarnTab } from './components/EarnTab';
 import { UpgradesTab } from './components/UpgradesTab';
 import { LeaderboardTab } from './components/LeaderboardTab';
 import { AirdropTab } from './components/AirdropTab';
+import { FriendsTab } from './components/FriendsTab';
 import { sounds } from './components/SoundEffects';
 import {
   getValueByLevel,
@@ -24,14 +25,14 @@ import {
   TelegramUser,
   triggerHapticFeedback
 } from './utils/telegram';
-import { Send, Sparkles, Coins, Zap, Trophy, ShieldAlert, Wifi, Battery } from 'lucide-react';
+import { Send, Sparkles, Coins, Zap, Trophy, ShieldAlert, Wifi, Battery, Users, X } from 'lucide-react';
 
 const LOCAL_STORAGE_STATS_KEY = 'swipe_2048_user_stats';
 const LOCAL_STORAGE_TASKS_KEY = 'swipe_2048_tasks';
 const LOCAL_STORAGE_BOARD_KEY = 'swipe_2048_active_board';
 const LOCAL_STORAGE_SCORE_KEY = 'swipe_2048_active_score';
 
-// Default stats block
+// Default stats block with Referral metrics
 const DEFAULT_STATS: UserStats = {
   highScore: 0,
   totalCoins: 200, // starting balance so they can play around instantly
@@ -44,7 +45,15 @@ const DEFAULT_STATS: UserStats = {
   lastDailyClaim: null,
   multiplierLevel: 1,
   spawnChanceLevel: 1,
-  undoCredits: 5 // start with 5 complimentary undo credits!
+  undoCredits: 5, // start with 5 complimentary undo credits!
+  
+  // Multi-tier referrals default
+  referredByTelegramId: null,
+  referralsCountTier1: 0,
+  referralsCountTier2: 0,
+  referralsTotalPointsEarned: 0,
+  unclaimedReferralCommissions: 0,
+  totalClaimedReferralCommissions: 0
 };
 
 // Default high-value tasks list
@@ -78,6 +87,12 @@ export default function App() {
   // Time metrics tracker reference
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Passive Referral Welcome Modal state
+  const [welcomeModal, setWelcomeModal] = useState<{ isOpen: boolean; referrerName: string; rewardAmount: number } | null>(null);
+
+  // Referral Live Toast notification state
+  const [notificationToast, setNotificationToast] = useState<{ id: string; message: string } | null>(null);
+
   // Safe parameters wrapper
   const updateStats = (newFields: Partial<UserStats>) => {
     setModelStats((prev) => {
@@ -109,9 +124,37 @@ export default function App() {
       });
 
       const storedStats = localStorage.getItem(LOCAL_STORAGE_STATS_KEY);
+      let parsedStats = DEFAULT_STATS;
       if (storedStats) {
         const parsed = JSON.parse(storedStats);
-        setModelStats({ ...DEFAULT_STATS, ...parsed });
+        parsedStats = { ...DEFAULT_STATS, ...parsed };
+        setModelStats(parsedStats);
+      }
+
+      // Referral Program deep link start_param check
+      const isNewUser = parsedStats.gamesPlayed === 0;
+      const hasReferred = parsedStats.referredByTelegramId;
+      if (user.startParam && user.startParam.startsWith('ref_') && !hasReferred && isNewUser) {
+        const referrerId = user.startParam.replace('ref_', '');
+        const welcomeReward = 5000;
+
+        parsedStats = {
+          ...parsedStats,
+          referredByTelegramId: referrerId,
+          totalCoins: parsedStats.totalCoins + welcomeReward
+        };
+
+        localStorage.setItem(LOCAL_STORAGE_STATS_KEY, JSON.stringify(parsedStats));
+        setModelStats(parsedStats);
+
+        setWelcomeModal({
+          isOpen: true,
+          referrerName: referrerId === '584102948' ? 'Sina Sadeghi' : `User #${referrerId}`,
+          rewardAmount: welcomeReward
+        });
+        
+        triggerHapticFeedback();
+        sounds.playLevelUp();
       }
 
       const storedTasks = localStorage.getItem(LOCAL_STORAGE_TASKS_KEY);
@@ -126,7 +169,7 @@ export default function App() {
         setScore(parseInt(storedScore, 10));
       } else {
         // Fallback initialization
-        initializeGame(storedStats ? JSON.parse(storedStats) : DEFAULT_STATS);
+        initializeGame(parsedStats);
       }
     } catch (e) {
       // Fallback
@@ -149,13 +192,57 @@ export default function App() {
     }
   }, [tiles, score]);
 
-  // Handle periodic Active Time Counter running every 1 second
+  // Handle periodic Active Time Counter running every 1 second, and passive referral generation!
   useEffect(() => {
+    let tickCount = 0;
     timerRef.current = setInterval(() => {
+      tickCount++;
+
       setModelStats((prev) => {
         const nextTime = prev.playTimeSeconds + 1;
-        const updated = { ...prev, playTimeSeconds: nextTime };
+        let nextUnclaimed = prev.unclaimedReferralCommissions;
+        let coinBonus = 0;
+        let simulatedMsg = "";
+
+        // Passive referral commissions ticking (check every 15 seconds)
+        if (tickCount % 15 === 0 && (prev.referralsCountTier1 > 0 || prev.referralsCountTier2 > 0)) {
+          // 40% probability of active referred person making a merge
+          if (Math.random() < 0.40) {
+            const isTier1 = prev.referralsCountTier2 === 0 || Math.random() < 0.65;
+            if (isTier1 && prev.referralsCountTier1 > 0) {
+              const scoreGained = Math.floor(Math.random() * 400) + 150;
+              coinBonus = Math.ceil(scoreGained * 0.10); // 10% royalty commission rate
+              nextUnclaimed += coinBonus;
+              simulatedMsg = `Passive Fren: +${coinBonus} $SWIPE earned from direct buddy merge! ⚡`;
+            } else if (!isTier1 && prev.referralsCountTier2 > 0) {
+              const scoreGained = Math.floor(Math.random() * 300) + 100;
+              coinBonus = Math.ceil(scoreGained * 0.05); // 5% tier 2 royalty commission rate
+              nextUnclaimed += coinBonus;
+              simulatedMsg = `Network Royalty: +${coinBonus} $SWIPE earned from Tier 2 play! 👑`;
+            }
+          }
+        }
+
+        const updated = { 
+          ...prev, 
+          playTimeSeconds: nextTime,
+          unclaimedReferralCommissions: nextUnclaimed
+        };
         localStorage.setItem(LOCAL_STORAGE_STATS_KEY, JSON.stringify(updated));
+
+        if (simulatedMsg) {
+          triggerHapticFeedback();
+          // Trigger a beautiful, temporary sliding in-app notification
+          setNotificationToast({
+            id: `toast-${Date.now()}`,
+            message: simulatedMsg
+          });
+          // Auto fade after 4.5 seconds
+          setTimeout(() => {
+            setNotificationToast(null);
+          }, 4500);
+        }
+
         return updated;
       });
     }, 1000);
@@ -463,6 +550,14 @@ export default function App() {
             </div>
           )}
 
+          {activeTab === 'friends' && (
+            <FriendsTab
+              stats={stats}
+              updateStats={updateStats}
+              tgUser={tgUser}
+            />
+          )}
+
           {activeTab === 'earn' && (
             <EarnTab
               stats={stats}
@@ -495,6 +590,63 @@ export default function App() {
             />
           )}
         </div>
+
+        {/* Live Passive Commission Multi-Tier Toast Alert */}
+        {notificationToast && (
+          <div className="absolute top-16 right-4 left-4 bg-slate-900/95 border border-indigo-500/30 backdrop-blur-xs shadow-2xl rounded-2xl p-3 z-45 flex items-center gap-2.5 text-left font-sans text-xs animate-fade-in select-none">
+            <span className="p-1 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-xs">⚡</span>
+            <p className="font-semibold text-slate-200 leading-snug flex-1 text-[11px]">
+              {notificationToast.message}
+            </p>
+            <button 
+              onClick={() => setNotificationToast(null)}
+              className="text-slate-500 hover:text-slate-300 cursor-pointer p-0.5"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Start-param Referral Welcome Modal */}
+        {welcomeModal?.isOpen && (
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs z-50 flex items-center justify-center p-6 animate-fade-in">
+            <div className="bg-slate-900 border-2 border-indigo-500/30 rounded-3xl p-6 w-full max-w-xs shadow-2xl relative text-center">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-16 h-16 bg-indigo-500/10 border-2 border-indigo-500 rounded-full flex items-center justify-center text-2xl animate-bounce">
+                🎁
+              </div>
+              
+              <button 
+                onClick={() => setWelcomeModal(null)}
+                className="absolute top-4 right-4 text-slate-500 hover:text-slate-400 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <h3 className="text-sm font-extrabold text-white mt-6 uppercase tracking-wider">Referral Welcome!</h3>
+              <p className="text-xs text-slate-400 mt-2">
+                You were invited to swipe by <span className="text-indigo-400 font-bold">{welcomeModal.referrerName}</span>.
+              </p>
+
+              <div className="my-4 bg-indigo-950/20 border border-indigo-900/50 p-3.5 rounded-2xl">
+                <span className="text-[9px] text-slate-500 uppercase font-mono tracking-wider block">Instant Mining Gift</span>
+                <span className="text-xl font-black text-yellow-405 font-mono block mt-1">
+                  +{welcomeModal.rewardAmount.toLocaleString()} $SWIPE
+                </span>
+              </div>
+
+              <p className="text-[11px] text-slate-400 leading-normal">
+                Gift added! Solve merging combos, load multipliers, and invite buddies of your own to compile royalty streams!
+              </p>
+
+              <button
+                onClick={() => setWelcomeModal(null)}
+                className="w-full mt-4 bg-indigo-600 hover:bg-indigo-550 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
+              >
+                Start Mining
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic TMA custom Bottom footer tabs navigation */}
         <Tabs

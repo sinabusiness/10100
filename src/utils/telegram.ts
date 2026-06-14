@@ -11,6 +11,7 @@ export interface TelegramUser {
   name: string; // full display name
   isPremium?: boolean;
   isReal: boolean; // false if simulated fallback
+  startParam?: string | null; // Deep-linked parameter, e.g. ref_123456
 }
 
 // Access the global Telegram WebApp from index.html
@@ -66,6 +67,15 @@ export function initTelegramApp() {
 export function getTelegramUserInfo(): TelegramUser {
   const tg = getTGObject();
   const user = tg?.initDataUnsafe?.user;
+  
+  // Extract startParam from native WebApp unsafe fields or from query strings
+  let startParam: string | null = null;
+  if (tg?.initDataUnsafe?.start_param) {
+    startParam = tg.initDataUnsafe.start_param;
+  } else if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('start_param') || urlParams.get('startapp');
+  }
 
   if (user) {
     return {
@@ -73,7 +83,8 @@ export function getTelegramUserInfo(): TelegramUser {
       username: user.username || `user_${user.id}`,
       name: `${user.first_name} ${user.last_name || ''}`.trim(),
       isPremium: !!user.is_premium,
-      isReal: true
+      isReal: true,
+      startParam
     };
   }
 
@@ -82,7 +93,8 @@ export function getTelegramUserInfo(): TelegramUser {
   try {
     const simulated = localStorage.getItem('swipe_2048_sim_tg_user');
     if (simulated) {
-      return JSON.parse(simulated);
+      const parsed = JSON.parse(simulated);
+      return { ...parsed, startParam: parsed.startParam || startParam };
     }
   } catch (e) {}
 
@@ -91,7 +103,8 @@ export function getTelegramUserInfo(): TelegramUser {
     username: 'sinasadeghi_dev',
     name: 'Sina Sadeghi',
     isPremium: false,
-    isReal: false
+    isReal: false,
+    startParam
   };
 }
 

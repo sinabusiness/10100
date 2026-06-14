@@ -1,8 +1,8 @@
 import React from 'react';
-import { Gamepad2, Zap, Gift, Trophy, Wallet } from 'lucide-react';
+import { Gamepad2, Zap, Gift, Trophy, Wallet, Users } from 'lucide-react';
 import { sounds } from './SoundEffects';
 
-export type TabType = 'play' | 'upgrades' | 'earn' | 'leaderboard' | 'airdrop';
+export type TabType = 'play' | 'upgrades' | 'friends' | 'earn' | 'leaderboard' | 'airdrop';
 
 interface TabsProps {
   activeTab: TabType;
@@ -20,6 +20,7 @@ export const Tabs: React.FC<TabsProps> = ({
   const tabsList = [
     { id: 'play', label: 'Play', icon: Gamepad2, activeColor: 'text-amber-400' },
     { id: 'upgrades', label: 'Boosters', icon: Zap, activeColor: 'text-cyan-400' },
+    { id: 'friends', label: 'Frens', icon: Users, activeColor: 'text-indigo-400' },
     { id: 'earn', label: 'Earn Hub', icon: Gift, activeColor: 'text-yellow-400', badge: hasUnclaimedDaily },
     { id: 'leaderboard', label: 'Hall', icon: Trophy, activeColor: 'text-emerald-450' },
     { id: 'airdrop', label: 'Airdrop', icon: Wallet, activeColor: 'text-purple-400', dot: !walletConnected }

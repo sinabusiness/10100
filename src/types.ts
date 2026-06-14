@@ -49,5 +49,25 @@ export interface UserStats {
   multiplierLevel: number; // Score multiplier level
   spawnChanceLevel: number; // Start game tile level spawn upgrade
   undoCredits: number;
+  
+  // Multi-tier Referral Program Metrics
+  referredByTelegramId?: string | null;
+  referralsCountTier1: number; // Direct invitations (Tier 1 frens)
+  referralsCountTier2: number; // Indirect invitations (Tier 2 frens)
+  referralsTotalPointsEarned: number; // Combined total coins produced by network
+  unclaimedReferralCommissions: number; // Current claimable idle points pool
+  totalClaimedReferralCommissions: number; // Historically converted commissions
+}
+
+export interface ReferredFriend {
+  id: string;
+  name: string;
+  username: string;
+  isPremium?: boolean;
+  scoreEarned: number;
+  tier: 1 | 2;
+  invitedBy?: string; // name of Tier 1 friend who recruited them (for Tier 2 frens)
+  lastPlayTimestamp: string;
+  isActiveNow?: boolean;
 }
 
